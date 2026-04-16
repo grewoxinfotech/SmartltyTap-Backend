@@ -6,6 +6,8 @@ const router = Router();
 
 router.get("/", controller.list);
 router.post("/", requireAuth, requireRole(["ADMIN"]), controller.create);
+router.patch("/:id", requireAuth, requireRole(["ADMIN"]), controller.update);
+router.delete("/:id", requireAuth, requireRole(["ADMIN"]), controller.remove);
 
 module.exports = router;
 

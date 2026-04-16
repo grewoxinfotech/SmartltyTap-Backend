@@ -1,5 +1,7 @@
 const cardsModel = require("./cards.model");
 const { AnalyticsTap, Card } = require("../../models");
+const fs = require("fs");
+const csv = require("csv-parser");
 
 // Ultra-fast in-memory cache for NFC Redirect Engine
 const redirectCache = new Map();
@@ -8,6 +10,46 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 async function createCard({ userId }) {
   const card = await cardsModel.createCardForUser(userId);
   return { ok: true, data: card };
+}
+
+async function assignCard(cardUid, userId) {
+  const card = await Card.findOne({ where: { card_uid: cardUid } });
+  if (!card) return { ok: false, status: 404, message: "Card not found" };
+  
+  await card.update({ user_id: userId, is_active: true });
+  redirectCache.delete(cardUid);
+  return { ok: true, data: { cardUid, userId } };
+}
+
+async function bulkUpload(filePath) {
+  const results = [];
+  
+  return new Promise((resolve) => {
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on("data", (data) => results.push(data))
+      .on("end", async () => {
+        try {
+          const cardsToInsert = results.map(row => ({
+            card_uid: row.cardUid || row.card_uid || row.UID,
+            user_id: row.userId || row.user_id || null,
+            is_active: row.isActive === "true" || row.isActive === "1",
+          })).filter(c => c.card_uid);
+
+          if (cardsToInsert.length === 0) {
+            resolve({ ok: false, status: 400, message: "No valid card_uid found in CSV" });
+            return;
+          }
+
+          await Card.bulkCreate(cardsToInsert, { ignoreDuplicates: true });
+          fs.unlinkSync(filePath); // Cleanup temp file
+          resolve({ ok: true, data: { imported: cardsToInsert.length } });
+        } catch (error) {
+          console.error("Bulk upload error:", error);
+          resolve({ ok: false, status: 500, message: "Database insertion failed" });
+        }
+      });
+  });
 }
 
 async function getUserCards(userId) {
@@ -78,4 +120,4 @@ async function handleTap(cardUid) {
 }
 
 // Ensure you export the cache map if you want to invalidate it from profiles.service updates!
-module.exports = { createCard, getUserCards, setCardStatus, handleTap, redirectCache };
+module.exports = { createCard, assignCard, bulkUpload, getUserCards, setCardStatus, handleTap, redirectCache };

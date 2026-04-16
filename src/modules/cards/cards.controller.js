@@ -9,6 +9,21 @@ async function create(req, res) {
   return ok(res, result.data);
 }
 
+async function bulkUpload(req, res) {
+  if (!req.file) return fail(res, 400, "CSV file is required");
+  const result = await cardsService.bulkUpload(req.file.path);
+  if (!result.ok) return fail(res, result.status, result.message);
+  return ok(res, result.data);
+}
+
+async function assign(req, res) {
+  const { cardUid, userId } = req.body;
+  if (!cardUid || !userId) return fail(res, 400, "cardUid and userId are required");
+  const result = await cardsService.assignCard(cardUid, userId);
+  if (!result.ok) return fail(res, result.status, result.message);
+  return ok(res, result.data);
+}
+
 async function listByUser(req, res) {
   const result = await cardsService.getUserCards(req.params.userId);
   return ok(res, result.data);
@@ -29,5 +44,5 @@ async function redirect(req, res) {
   return ok(res, result.data);
 }
 
-module.exports = { create, listByUser, status, redirect };
+module.exports = { create, bulkUpload, assign, listByUser, status, redirect };
 

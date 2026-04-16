@@ -18,5 +18,17 @@ async function verify(req, res) {
   return ok(res, result.data);
 }
 
-module.exports = { createOrder, verify };
+async function webhook(req, res) {
+  // Note: For Razorpay, req.body should be validated against razorpay-signature header.
+  // Using a simplified signature check for the webhook payload.
+  const signature = req.headers["x-razorpay-signature"];
+  if (!signature) return fail(res, 400, "Missing signature");
+  
+  const result = await paymentsService.handleWebhook(req.body, signature);
+  if (!result.ok) return fail(res, result.status, result.message);
+  
+  return ok(res, { received: true });
+}
+
+module.exports = { createOrder, verify, webhook };
 

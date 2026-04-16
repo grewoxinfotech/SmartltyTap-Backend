@@ -15,5 +15,20 @@ function createProduct(data) {
   });
 }
 
-module.exports = { listProducts, createProduct };
+function updateProduct(id, data) {
+  const updateData = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.price !== undefined) updateData.price = data.price;
+  if (data.stock !== undefined) updateData.stock = data.stock;
+  if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl;
+
+  return Product.update(updateData, { where: { id } });
+}
+
+function deleteProduct(id) {
+  return Product.update({ is_active: false }, { where: { id } });
+}
+
+module.exports = { listProducts, createProduct, updateProduct, deleteProduct };
 

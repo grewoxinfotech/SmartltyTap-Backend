@@ -41,5 +41,28 @@ async function verifyAndCapture(payload) {
   return { ok: true, data: { verified: true, orderId: payload.orderId } };
 }
 
-module.exports = { createRazorpayOrder, verifyAndCapture };
+async function handleWebhook(payload, signature) {
+  // Validate webhook signature
+  const expected = crypto.createHmac("sha256", env.razorpay.secret).update(JSON.stringify(payload)).digest("hex");
+  if (expected !== signature) {
+    return { ok: false, status: 400, message: "Invalid webhook signature" };
+  }
+
+  // Handle payment.captured event
+  if (payload.event === "payment.captured") {
+    const paymentEntity = payload.payload.payment.entity;
+    const razorpay_order_id = paymentEntity.order_id;
+    const razorpay_payment_id = paymentEntity.id;
+
+    const payment = await Payment.findOne({ where: { razorpay_order_id } });
+    if (payment) {
+      await payment.update({ status: "CAPTURED", razorpay_payment_id });
+      await Order.update({ status: "PAID" }, { where: { id: payment.order_id } });
+    }
+  }
+
+  return { ok: true };
+}
+
+module.exports = { createRazorpayOrder, verifyAndCapture, handleWebhook };
 
