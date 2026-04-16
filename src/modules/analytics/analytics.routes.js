@@ -2,7 +2,7 @@ const { Router } = require("express");
 const { ok, fail } = require("../../utils/response");
 const { requireAuth, requireRole } = require("../../middleware/auth");
 const { z } = require("zod");
-const { AnalyticsTap, AnalyticsClick } = require("../../models");
+const { AnalyticsEvent, Card } = require("../../models");
 
 const router = Router();
 
@@ -10,31 +10,40 @@ router.post("/tap", async (req, res) => {
   const schema = z.object({ cardId: z.string().min(1) });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return fail(res, 400, "Invalid payload");
-  await AnalyticsTap.create({ card_uid: parsed.data.cardId });
+  
+  const card = await Card.findByPk(parsed.data.cardId);
+  if (!card) return fail(res, 404, "Card not found");
+
+  await AnalyticsEvent.create({ cardId: card.id, userId: card.user_id, type: "tap" });
   return ok(res, { stored: true });
 });
 
 router.post("/click", async (req, res) => {
-  const schema = z.object({ userId: z.string().min(1), platform: z.enum(["GOOGLE", "WHATSAPP", "INSTAGRAM", "WEBSITE"]) });
+  const schema = z.object({ cardId: z.string().min(1), userId: z.string().min(1), type: z.string().min(1) });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return fail(res, 400, "Invalid payload");
-  await AnalyticsClick.create({ user_id: parsed.data.userId, platform: parsed.data.platform });
+  
+  await AnalyticsEvent.create({ cardId: parsed.data.cardId, userId: parsed.data.userId, type: parsed.data.type });
   return ok(res, { stored: true });
 });
 
 router.get("/:userId", requireAuth, async (req, res) => {
   const userId = req.params.userId;
-  const totalTaps = await AnalyticsTap.count();
-  const clicks = await AnalyticsClick.findAll({ where: { user_id: userId }, attributes: ["platform"] });
+  const taps = await AnalyticsEvent.count({ where: { userId, type: "tap" } });
+  
+  const clicks = await AnalyticsEvent.findAll({ where: { userId } });
   const clicksByPlatform = clicks.reduce((acc, c) => {
-    acc[c.platform] = (acc[c.platform] || 0) + 1;
+    if (c.type !== "tap") {
+      acc[c.type] = (acc[c.type] || 0) + 1;
+    }
     return acc;
   }, {});
-  return ok(res, { totalTaps, clicksByPlatform });
+  
+  return ok(res, { totalTaps: taps, clicksByPlatform });
 });
 
 router.get("/summary", requireAuth, requireRole(["ADMIN"]), async (_req, res) => {
-  const totalTaps = await AnalyticsTap.count();
+  const totalTaps = await AnalyticsEvent.count({ where: { type: "tap" } });
   return ok(res, { totalTaps });
 });
 

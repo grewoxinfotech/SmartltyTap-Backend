@@ -1,7 +1,6 @@
 const User = require("./User");
 const Card = require("./Card");
-const AnalyticsTap = require("./AnalyticsTap");
-const AnalyticsClick = require("./AnalyticsClick");
+const AnalyticsEvent = require("./AnalyticsEvent");
 const Profile = require("./Profile");
 const Link = require("./Link");
 const Product = require("./Product");
@@ -55,8 +54,7 @@ module.exports = {
   CartItem,
   Template,
   Reseller,
-  AnalyticsTap,
-  AnalyticsClick,
+  AnalyticsEvent,
   Settings,
 };
 

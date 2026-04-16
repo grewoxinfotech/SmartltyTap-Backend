@@ -4,7 +4,8 @@ const { requireAuth } = require("../../middleware/auth");
 
 const router = Router();
 
-router.post("/update", requireAuth, controller.update);
+router.put("/update", requireAuth, controller.update);
+router.post("/update", requireAuth, controller.update); // Keep post for compatibility
 router.get("/:userId", requireAuth, controller.get);
 
 module.exports = router;

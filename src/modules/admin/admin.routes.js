@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const { requireAuth, requireRole } = require("../../middleware/auth");
-const { User, Order, Card, AnalyticsTap } = require("../../models");
+const { User, Order, Card, AnalyticsTap, Payment } = require("../../models");
 const { ok, fail } = require("../../utils/response");
 const sequelize = require("../../config/db");
 const { generateInvoicePDF } = require("../../utils/pdf");
@@ -65,6 +65,11 @@ router.get("/orders/:id/invoice", requireAuth, requireRole(["ADMIN"]), async (re
 router.get("/cards", requireAuth, requireRole(["ADMIN"]), async (_req, res) => {
   const cards = await Card.findAll({ order: [["created_at", "DESC"]] });
   return ok(res, cards);
+});
+
+router.get("/payments", requireAuth, requireRole(["ADMIN", "SUPER_ADMIN"]), async (_req, res) => {
+  const payments = await Payment.findAll({ order: [["created_at", "DESC"]] });
+  return ok(res, payments);
 });
 
 module.exports = router;

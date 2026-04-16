@@ -1,31 +1,36 @@
 const { Profile, Link } = require("../../models");
 
-async function upsertProfile({ userId, template, branding, mode }) {
-  const existing = await Profile.findOne({ where: { user_id: userId } });
-  if (existing) {
-    await existing.update({
-      template: template ?? existing.template,
-      mode: mode ?? existing.mode,
-      logo_url: branding?.logoUrl ?? existing.logo_url,
-      brand_primary: branding?.primary ?? existing.brand_primary,
-      brand_secondary: branding?.secondary ?? existing.brand_secondary,
-    });
-    return existing;
-  }
-  return Profile.create({
-    user_id: userId,
-    template: template ?? "template-01",
-    mode: mode ?? "SMART",
-    logo_url: branding?.logoUrl ?? null,
-    brand_primary: branding?.primary ?? "#4F46E5",
-    brand_secondary: branding?.secondary ?? "#0ea5e9",
-  });
+async function upsertProfile(data) {
+  const [prof] = await Profile.upsert(
+    {
+      user_id: data.userId,
+      name: data.name,
+      business_name: data.business_name,
+      title: data.title,
+      bio: data.bio,
+      profile_image: data.profile_image,
+      phone: data.phone,
+      whatsapp: data.whatsapp,
+      instagram: data.instagram,
+      website: data.website,
+      google_review: data.google_review,
+      template: data.template,
+      mode: data.mode,
+      logo_url: data.logo_url,
+      brand_primary: data.brand_primary,
+      brand_secondary: data.brand_secondary,
+    },
+    { returning: true }
+  );
+  return prof;
 }
 
 async function setLink(userId, platform, url) {
-  const existing = await Link.findOne({ where: { user_id: userId, platform } });
-  if (existing) return existing.update({ url, is_enabled: true });
-  return Link.create({ user_id: userId, platform, url, is_enabled: true });
+  const [link] = await Link.upsert(
+    { user_id: userId, platform, url },
+    { returning: true }
+  );
+  return link;
 }
 
 async function getProfile(userId) {
@@ -35,4 +40,3 @@ async function getProfile(userId) {
 }
 
 module.exports = { upsertProfile, setLink, getProfile };
-

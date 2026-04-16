@@ -15,6 +15,7 @@ const profilesRoutes = require("../modules/profiles/profiles.routes");
 const redirectRoutes = require("./redirect");
 const settingsRoutes = require("../modules/settings/settings.routes");
 const templatesRoutes = require("../modules/templates/templates.routes");
+const uploadRoutes = require("../modules/upload/upload.routes");
 
 const router = Router();
 
@@ -29,10 +30,12 @@ router.use("/payments", paymentRoutes);
 router.use("/analytics", analyticsRoutes);
 router.use("/admin", adminRoutes);
 router.use("/reseller", resellerRoutes);
+// Both /profile and /profiles to support all frontend calls
+router.use("/profiles", profilesRoutes);
 router.use("/profile", profilesRoutes);
-router.use("/", redirectRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/templates", templatesRoutes);
+router.use("/upload", uploadRoutes);
+router.use("/", redirectRoutes);
 
 module.exports = router;
-

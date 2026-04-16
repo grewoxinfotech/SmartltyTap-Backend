@@ -17,6 +17,8 @@ const User = sequelize.define(
     role: { type: DataTypes.ENUM("ADMIN", "USER", "RESELLER"), allowNull: false, defaultValue: "USER" },
     plan: { type: DataTypes.ENUM("BASIC", "PREMIUM"), allowNull: false, defaultValue: "BASIC" },
     is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    reset_token: { type: DataTypes.STRING, allowNull: true, defaultValue: null },
+    reset_token_expires: { type: DataTypes.DATE, allowNull: true, defaultValue: null },
   },
   {
     tableName: "users",
@@ -39,4 +41,3 @@ User.beforeCreate(async (user) => {
 });
 
 module.exports = User;
-
