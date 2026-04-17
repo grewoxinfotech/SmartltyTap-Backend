@@ -11,7 +11,11 @@ require("./models");
 const app = express();
 
 // ── Security ──────────────────────────────────────────────────────────────────
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 
 // CORS — allow website + admin origins
 const allowedOrigins = [
@@ -88,7 +92,12 @@ app.use((err, req, res, next) => {
 (async () => {
   try {
     await sequelize.authenticate();
-    await sequelize.sync({ alter: true }); // alter: true adds new columns automatically
+    try {
+      await sequelize.sync({ alter: true }); // prefer schema alignment in dev
+    } catch (syncErr) {
+      console.warn("Sequelize alter sync failed, falling back to sync():", syncErr?.message || syncErr);
+      await sequelize.sync();
+    }
     app.listen(env.port, () => {
       console.log(`API running on http://localhost:${env.port}`);
     });

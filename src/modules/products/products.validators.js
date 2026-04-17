@@ -6,6 +6,7 @@ const createProductSchema = z.object({
   price: z.number().min(0, "Price must be >= 0"),
   stock: z.number().int().min(0, "Stock must be >= 0").optional().default(0),
   imageUrl: z.string().url("Must be a valid URL").optional().nullable(),
+  images: z.array(z.string().url("Each image must be a valid URL")).optional().default([]),
 });
 
 const updateProductSchema = z.object({
@@ -14,6 +15,7 @@ const updateProductSchema = z.object({
   price: z.number().min(0, "Price must be >= 0").optional(),
   stock: z.number().int().min(0, "Stock must be >= 0").optional(),
   imageUrl: z.string().url("Must be a valid URL").optional().nullable(),
+  images: z.array(z.string().url("Each image must be a valid URL")).optional(),
 });
 
 module.exports = { createProductSchema, updateProductSchema };
