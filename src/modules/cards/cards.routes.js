@@ -15,11 +15,17 @@ router.post("/bulk-upload", requireAuth, requireRole(["ADMIN"]), upload.single("
 // Assign card
 router.post("/assign", requireAuth, requireRole(["ADMIN"]), controller.assign);
 
+// Lost-card flow: disable old card, assign new card
+router.post("/reassign", requireAuth, requireRole(["SUPER_ADMIN"]), controller.reassign);
+
 // User cards (required)
 router.get("/:userId", requireAuth, controller.listByUser);
 
 // Activate/deactivate (required)
-router.patch("/:cardId/status", requireAuth, requireRole(["ADMIN"]), controller.status);
+router.patch("/:id/status", requireAuth, requireRole(["ADMIN"]), controller.status);
+
+// Update card metadata (e.g. batch_no)
+router.patch("/:id", requireAuth, requireRole(["ADMIN"]), controller.update);
 
 module.exports = router;
 

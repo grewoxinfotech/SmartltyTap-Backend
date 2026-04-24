@@ -1,5 +1,5 @@
 const { Product } = require("../../models");
-const ordersModel = require("./orders.model");
+const ordersRepository = require("./orders.repository");
 
 async function create(payload) {
   let amount = 0;
@@ -9,17 +9,17 @@ async function create(payload) {
     if (!product) return { ok: false, status: 404, message: `Product not found: ${it.productId}` };
     amount += Number(product.price) * it.qty;
   }
-  const order = await ordersModel.createOrder({ userId: payload.userId, items: payload.items, amount, currency: "INR" });
+  const order = await ordersRepository.createOrder({ userId: payload.userId, items: payload.items, amount, currency: "INR" });
   return { ok: true, data: order };
 }
 
 async function list(userId) {
-  const orders = await ordersModel.listOrdersByUser(userId);
+  const orders = await ordersRepository.listOrdersByUser(userId);
   return { ok: true, data: orders };
 }
 
 async function details(orderId) {
-  const data = await ordersModel.getOrderWithItems(orderId);
+  const data = await ordersRepository.getOrderWithItems(orderId);
   return { ok: true, data };
 }
 

@@ -12,4 +12,9 @@ router.post("/reset-password", controller.resetPassword);
 router.post("/change-password", requireAuth, controller.changePassword);
 router.post("/update-email", requireAuth, controller.updateEmail);
 
+// OTP Auth
+router.post("/send-otp", controller.sendOtp);
+router.post("/verify-otp", controller.verifyOtp);
+
+
 module.exports = router;

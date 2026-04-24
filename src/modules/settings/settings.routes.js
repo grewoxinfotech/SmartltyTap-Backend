@@ -6,5 +6,6 @@ const router = Router();
 
 router.get("/", requireAuth, getSettings);
 router.post("/update", requireAuth, requireRole(["ADMIN"]), updateSettings);
+router.patch("/feature-flags", requireAuth, requireRole(["SUPER_ADMIN"]), updateSettings);
 
 module.exports = router;

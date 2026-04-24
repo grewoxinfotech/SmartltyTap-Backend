@@ -1,5 +1,5 @@
 const { Settings } = require("../../models");
-const { successResponse, errorResponse } = require("../../utils/response");
+const { ok, fail } = require("../../utils/response");
 const crypto = require("../../utils/crypto");
 
 let settingsCache = null;
@@ -7,13 +7,12 @@ let settingsCache = null;
 const getSettings = async (req, res) => {
   try {
     if (settingsCache) {
-      return successResponse(res, "Settings fetched successfully", settingsCache);
+      return ok(res, settingsCache);
     }
     
     let settings = await Settings.findOne();
     if (!settings) {
-      // Return empty if not created yet
-      return successResponse(res, "Settings fetched successfully", {});
+      return ok(res, {});
     }
 
     const settingsObj = settings.toJSON();
@@ -34,15 +33,18 @@ const getSettings = async (req, res) => {
 
     settingsCache = settingsObj; // Update cache
     
-    return successResponse(res, "Settings fetched successfully", settingsObj);
+    return ok(res, settingsObj);
   } catch (err) {
-    return errorResponse(res, err.message, 500);
+    return fail(res, 500, err.message);
   }
 };
 
 const updateSettings = async (req, res) => {
   try {
-    const data = req.body;
+    const data = { ...req.body };
+    if (data.feature_flags && typeof data.feature_flags !== "object") {
+      return fail(res, 400, "feature_flags must be an object");
+    }
     let settings = await Settings.findOne();
 
     // Encrypt sensitive info
@@ -62,7 +64,20 @@ const updateSettings = async (req, res) => {
     }
 
     if (!settings) {
-      settings = await Settings.create(data);
+      settings = await Settings.create({
+        ...data,
+        branding: {
+          ...(data.branding || {}),
+          feature_flags: {
+            whatsapp_button: true,
+            social_links: true,
+            lead_forms: true,
+            gallery: true,
+            ...(data.branding?.feature_flags || {}),
+            ...(data.feature_flags || {}),
+          },
+        },
+      });
     } else {
       // We might need to merge smtp_config deeply if only parts are updated
       if (data.smtp_config && settings.smtp_config) {
@@ -71,15 +86,26 @@ const updateSettings = async (req, res) => {
       if (data.branding && settings.branding) {
         data.branding = { ...settings.branding, ...data.branding };
       }
+      if (data.feature_flags) {
+        data.branding = {
+          ...(settings.branding || {}),
+          ...(data.branding || {}),
+          feature_flags: {
+            ...((settings.branding && settings.branding.feature_flags) || {}),
+            ...((data.branding && data.branding.feature_flags) || {}),
+            ...data.feature_flags,
+          },
+        };
+      }
       await settings.update(data);
     }
 
     // Clear cache
     settingsCache = null;
 
-    return successResponse(res, "Settings updated successfully", settings);
+    return ok(res, settings);
   } catch (err) {
-    return errorResponse(res, err.message, 500);
+    return fail(res, 500, err.message);
   }
 };
 

@@ -1,76 +1,48 @@
-const { Template, Profile } = require("../../models");
-const { successResponse, errorResponse } = require("../../utils/response");
+const { ok, fail } = require("../../utils/response");
+const templatesService = require("./templates.service");
 
 const getTemplates = async (req, res) => {
-  try {
-    const templates = await Template.findAll({ where: { is_active: true } });
-    return successResponse(res, "Templates fetched successfully", templates);
-  } catch (err) {
-    return errorResponse(res, err.message, 500);
-  }
+  const result = await templatesService.getAllTemplates();
+  if (!result.ok) return fail(res, result.status, result.message);
+  return ok(res, result.data);
 };
 
 const createTemplate = async (req, res) => {
-  try {
-    const { name, layout_config, preview_image } = req.body;
-    if (!name) {
-      return errorResponse(res, "Name is required", 400);
-    }
-    
-    const newTemplate = await Template.create({
-      name,
-      layout_config: layout_config || {},
-      preview_image,
-    });
-
-    return successResponse(res, "Template created successfully", newTemplate, 201);
-  } catch (err) {
-    return errorResponse(res, err.message, 500);
-  }
+  const { name } = req.body;
+  if (!name) return fail(res, 400, "Name is required");
+  const result = await templatesService.createTemplate(req.body);
+  return ok(res, result.data);
 };
 
 const updateTemplate = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-    
-    const template = await Template.findByPk(id);
-    if (!template) {
-      return errorResponse(res, "Template not found", 404);
-    }
-
-    await template.update(updateData);
-    return successResponse(res, "Template updated successfully", template);
-  } catch (err) {
-    return errorResponse(res, err.message, 500);
-  }
+  const result = await templatesService.updateTemplate(req.params.id, req.body);
+  if (!result.ok) return fail(res, result.status, result.message);
+  return ok(res, result.data);
 };
 
 const assignTemplate = async (req, res) => {
-  try {
-    const { userId, templateId } = req.body;
-    if (!userId || !templateId) {
-      return errorResponse(res, "userId and templateId are required", 400);
-    }
+  const { userId, templateId } = req.body;
+  if (!userId || !templateId) return fail(res, 400, "userId and templateId are required");
+  const result = await templatesService.assignTemplateToUser(userId, templateId);
+  if (!result.ok) return fail(res, result.status, result.message);
+  return ok(res, result.data);
+};
 
-    const template = await Template.findByPk(templateId);
-    if (!template || !template.is_active) {
-      return errorResponse(res, "Invalid or inactive template", 400);
-    }
+const getMyThemeOptions = async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) return fail(res, 401, "Unauthenticated");
+  const result = await templatesService.getThemeOptions(userId);
+  return ok(res, result.data);
+};
 
-    const profile = await Profile.findOne({ where: { user_id: userId } });
-    if (!profile) {
-      return errorResponse(res, "Profile not found for this user", 404);
-    }
-
-    // Assign the template id explicitly to the `template` string field in Profile model
-    profile.template = templateId;
-    await profile.save();
-
-    return successResponse(res, "Template assigned successfully", profile);
-  } catch (err) {
-    return errorResponse(res, err.message, 500);
-  }
+const selectMyTheme = async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) return fail(res, 401, "Unauthenticated");
+  const { templateId } = req.body || {};
+  if (!templateId) return fail(res, 400, "templateId is required");
+  const result = await templatesService.assignTemplateToUser(userId, templateId);
+  if (!result.ok) return fail(res, result.status, result.message);
+  return ok(res, { selectedTemplateId: templateId });
 };
 
 module.exports = {
@@ -78,4 +50,6 @@ module.exports = {
   createTemplate,
   updateTemplate,
   assignTemplate,
+  getMyThemeOptions,
+  selectMyTheme,
 };

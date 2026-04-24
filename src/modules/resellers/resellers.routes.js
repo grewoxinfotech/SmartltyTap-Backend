@@ -3,7 +3,7 @@ const { z } = require("zod");
 const { requireAuth, requireRole } = require("../../middleware/auth");
 const { ok, fail } = require("../../utils/response");
 const { User, Reseller, Order, OrderItem, Product } = require("../../models");
-const generateId = require("../../middlewares/generatorId");
+const generateId = require("../../middleware/generatorId");
 
 const router = Router();
 

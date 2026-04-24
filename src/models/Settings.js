@@ -1,11 +1,11 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
-const generateId = require("../middlewares/generatorId");
+const generateId = require("../middleware/generatorId");
 
 const Settings = sequelize.define(
   "Settings",
   {
-    id: { type: DataTypes.STRING, primaryKey: true, unique: true, defaultValue: () => generateId("SET") },
+    id: { type: DataTypes.STRING, primaryKey: true, defaultValue: () => generateId("SET") },
     site_name: { type: DataTypes.STRING, allowNull: true },
     logo_url: { type: DataTypes.STRING, allowNull: true },
     email: { type: DataTypes.STRING, allowNull: true },

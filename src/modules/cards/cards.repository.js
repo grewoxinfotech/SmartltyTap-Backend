@@ -1,0 +1,46 @@
+const { Card, Profile, Link, User } = require("../../models");
+
+async function createCardForUser(userId, cardUid) {
+  // Ensure we don't try to associate with a non-existent placeholder like ""
+  const targetId = userId && userId !== "" ? userId : null;
+  return Card.create({ user_id: targetId, card_uid: cardUid });
+}
+
+async function listCardsByUser(userId) {
+  return Card.findAll({ where: { user_id: userId }, order: [["created_at", "DESC"]] });
+}
+
+async function updateCardStatus(cardUid, isActive) {
+  const [count] = await Card.update({ is_active: isActive }, { where: { card_uid: cardUid } });
+  return count;
+}
+
+async function findCardRedirectPayload(cardUid) {
+  // Single optimized query for tap redirect
+  return Card.findOne({
+    where: { card_uid: cardUid },
+    attributes: ["card_uid", "is_active", "redirect_mode", "direct_google_url", "user_id"],
+    include: [
+      { model: User, attributes: ["id", "name"] },
+      {
+        model: Profile,
+        attributes: [
+          "mode",
+          "template",
+          "logo_url",
+          "brand_primary",
+          "brand_secondary",
+          "gallery",
+          "portfolio",
+          "testimonials",
+          "brochure_url",
+          "brochure_name",
+        ],
+      },
+      { model: Link, attributes: ["type", "url", "is_active", "order"] },
+    ],
+  });
+}
+
+module.exports = { createCardForUser, listCardsByUser, updateCardStatus, findCardRedirectPayload };
+

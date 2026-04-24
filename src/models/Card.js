@@ -1,6 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
-const generateId = require("../middlewares/generatorId");
+const generateId = require("../middleware/generatorId");
 
 const Card = sequelize.define(
   "Card",
@@ -8,10 +8,9 @@ const Card = sequelize.define(
     id: {
       type: DataTypes.STRING,
       primaryKey: true,
-      unique: true,
       defaultValue: () => generateId("CRD"),
     },
-    card_uid: { type: DataTypes.STRING, allowNull: false, unique: true },
+    card_uid: { type: DataTypes.STRING, allowNull: true },
     user_id: { type: DataTypes.STRING, allowNull: true, defaultValue: null },
     is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     tap_count: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
@@ -23,19 +22,22 @@ const Card = sequelize.define(
     timestamps: true,
     createdAt: "created_at",
     updatedAt: false,
+    indexes: [{ name: "cards_card_uid_unique", unique: true, fields: ["card_uid"] }],
   }
 );
 
 Card.beforeCreate(async (card) => {
-  // Ensure unique card_uid
-  let uidOk = false;
-  while (!uidOk) {
-    const uid = `NFC-${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
-    // eslint-disable-next-line no-await-in-loop
-    const existing = await Card.findOne({ where: { card_uid: uid } });
-    if (!existing) {
-      card.card_uid = uid;
-      uidOk = true;
+  // Ensure unique card_uid if not provided (allows manual entry of chip UID)
+  if (!card.card_uid) {
+    let uidOk = false;
+    while (!uidOk) {
+      const uid = `NFC-${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
+      // eslint-disable-next-line no-await-in-loop
+      const existing = await Card.findOne({ where: { card_uid: uid } });
+      if (!existing) {
+        card.card_uid = uid;
+        uidOk = true;
+      }
     }
   }
 

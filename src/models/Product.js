@@ -1,11 +1,11 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
-const generateId = require("../middlewares/generatorId");
+const generateId = require("../middleware/generatorId");
 
 const Product = sequelize.define(
   "Product",
   {
-    id: { type: DataTypes.STRING, primaryKey: true, unique: true, defaultValue: () => generateId("PRD") },
+    id: { type: DataTypes.STRING, primaryKey: true, defaultValue: () => generateId("PRD") },
     name: { type: DataTypes.STRING, allowNull: false },
     description: { type: DataTypes.TEXT, allowNull: true },
     price: { type: DataTypes.DECIMAL(10, 2), allowNull: false, defaultValue: 0 },

@@ -1,6 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
-const generateId = require("../middlewares/generatorId");
+const generateId = require("../middleware/generatorId");
 
 const User = sequelize.define(
   "User",
@@ -8,14 +8,13 @@ const User = sequelize.define(
     id: {
       type: DataTypes.STRING,
       primaryKey: true,
-      unique: true,
       defaultValue: () => generateId("USR"),
     },
     name: { type: DataTypes.STRING, allowNull: false },
     email: { type: DataTypes.STRING, allowNull: false, unique: true },
     password_hash: { type: DataTypes.STRING, allowNull: false },
-    role: { type: DataTypes.ENUM("ADMIN", "USER", "RESELLER"), allowNull: false, defaultValue: "USER" },
-    plan: { type: DataTypes.ENUM("BASIC", "PREMIUM"), allowNull: false, defaultValue: "BASIC" },
+    role: { type: DataTypes.ENUM("ADMIN", "USER", "RESELLER", "SUPER_ADMIN"), allowNull: false, defaultValue: "USER" },
+    plan: { type: DataTypes.ENUM("BASIC", "PREMIUM", "PRO", "FREE"), allowNull: false, defaultValue: "BASIC" },
     is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     reset_token: { type: DataTypes.STRING, allowNull: true, defaultValue: null },
     reset_token_expires: { type: DataTypes.DATE, allowNull: true, defaultValue: null },
@@ -24,7 +23,7 @@ const User = sequelize.define(
     tableName: "users",
     timestamps: true,
     createdAt: "created_at",
-    updatedAt: false,
+    updatedAt: "updated_at",
   }
 );
 

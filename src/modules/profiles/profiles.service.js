@@ -1,4 +1,4 @@
-const profilesModel = require("./profiles.model");
+const profilesRepository = require("./profiles.repository");
 
 function mapProfile(profile) {
   if (!profile) return null;
@@ -17,6 +17,10 @@ function mapProfile(profile) {
     googleReview: profile.google_review,
     template: profile.template,
     mode: profile.mode,
+    gallery: profile.gallery || [],
+    portfolio: profile.portfolio || [],
+    testimonials: profile.testimonials || [],
+    brochure: profile.brochure_url ? { url: profile.brochure_url, name: profile.brochure_name } : null,
     branding: {
       logoUrl: profile.logo_url,
       primary: profile.brand_primary,
@@ -26,7 +30,7 @@ function mapProfile(profile) {
 }
 
 async function updateProfile(payload) {
-  await profilesModel.upsertProfile({
+  await profilesRepository.upsertProfile({
     userId: payload.userId,
     name: payload.name,
     business_name: payload.businessName,
@@ -43,6 +47,11 @@ async function updateProfile(payload) {
     logo_url: payload.branding?.logoUrl,
     brand_primary: payload.branding?.primary,
     brand_secondary: payload.branding?.secondary,
+    gallery: payload.gallery,
+    portfolio: payload.portfolio,
+    testimonials: payload.testimonials,
+    brochure_url: payload.brochure?.url,
+    brochure_name: payload.brochure?.name,
   });
 
   const map = [
@@ -54,17 +63,22 @@ async function updateProfile(payload) {
   for (const [platform, url] of map) {
     if (url !== undefined) {
       // eslint-disable-next-line no-await-in-loop
-      await profilesModel.setLink(payload.userId, platform, url);
+      await profilesRepository.setLink(payload.userId, platform, url);
     }
   }
 
-  const full = await profilesModel.getProfile(payload.userId);
+  const full = await profilesRepository.getProfile(payload.userId);
   return { ok: true, data: { profile: mapProfile(full.profile), links: full.links } };
 }
 
 async function getProfile(userId) {
-  const full = await profilesModel.getProfile(userId);
+  const full = await profilesRepository.getProfile(userId);
   return { ok: true, data: { profile: mapProfile(full.profile), links: full.links } };
 }
 
-module.exports = { updateProfile, getProfile };
+async function listProfiles() {
+  const profiles = await profilesRepository.listProfiles();
+  return { ok: true, data: profiles.map(mapProfile) };
+}
+
+module.exports = { updateProfile, getProfile, listProfiles };
