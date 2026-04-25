@@ -2,6 +2,7 @@ const cardsRepository = require("./cards.repository");
 const { AnalyticsEvent, Card } = require("../../models");
 const fs = require("fs");
 const csv = require("csv-parser");
+const bcrypt = require("bcryptjs");
 
 // Ultra-fast in-memory cache for NFC Redirect Engine
 const redirectCache = new Map();
@@ -28,6 +29,86 @@ async function assignCard(cardUid, userId) {
   await card.update({ user_id: userId, is_active: true });
   redirectCache.delete(cardUid);
   return { ok: true, data: { cardUid, userId } };
+}
+
+function generateTemporaryPassword() {
+  const seed = Math.random().toString(36).slice(-6).toUpperCase();
+  return `ST@${seed}#`;
+}
+
+async function sellCardWithBuyer({ cardUid, buyerName, buyerEmail, buyerPhone, businessType, templateId }) {
+  const { User, Profile, Template } = require("../../models");
+
+  const card = await Card.findOne({ where: { card_uid: cardUid } });
+  if (!card) return { ok: false, status: 404, message: "Card not found" };
+  if (card.user_id) return { ok: false, status: 409, message: "Card is already sold/assigned" };
+
+  let user = await User.findOne({ where: { email: buyerEmail } });
+  let temporaryPassword = null;
+
+  if (!user) {
+    temporaryPassword = generateTemporaryPassword();
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+    user = await User.create({
+      name: buyerName,
+      email: buyerEmail,
+      password_hash: passwordHash,
+      role: "USER",
+      plan: "BASIC",
+      is_active: true,
+      reset_token: "FORCE_RESET",
+      reset_token_expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+  }
+
+  if (templateId) {
+    const template = await Template.findByPk(templateId);
+    if (!template || !template.is_active) {
+      return { ok: false, status: 400, message: "Selected template is invalid or inactive" };
+    }
+
+    const supported = template.layout_config?.businessTypes || template.layout_config?.business_types || [];
+    if (businessType && Array.isArray(supported) && supported.length > 0) {
+      const matched = supported.some((value) => String(value).toLowerCase() === String(businessType).toLowerCase());
+      if (!matched) {
+        return { ok: false, status: 400, message: "Selected template is not allowed for this business type" };
+      }
+    }
+  }
+
+  const existingProfile = await Profile.findOne({ where: { user_id: user.id } });
+  if (existingProfile) {
+    await existingProfile.update({
+      name: buyerName || existingProfile.name,
+      phone: buyerPhone || existingProfile.phone,
+      title: businessType || existingProfile.title,
+      ...(templateId ? { template: templateId } : {}),
+    });
+  } else {
+    await Profile.create({
+      user_id: user.id,
+      name: buyerName,
+      phone: buyerPhone || null,
+      title: businessType || null,
+      template: templateId || "template-01",
+    });
+  }
+
+  await card.update({ user_id: user.id, is_active: true });
+  redirectCache.delete(cardUid);
+
+  return {
+    ok: true,
+    data: {
+      cardUid,
+      userId: user.id,
+      buyer: { id: user.id, name: user.name, email: user.email },
+      credentials: temporaryPassword ? { email: buyerEmail, temporaryPassword } : null,
+      message: temporaryPassword
+        ? "Card sold and new buyer credentials created"
+        : "Card sold and linked to existing buyer account",
+    },
+  };
 }
 
 async function reassignCard(oldCardUid, newCardUid, userId) {
@@ -170,4 +251,15 @@ async function updateCard(id, body) {
 }
 
 // Ensure you export the cache map if you want to invalidate it from profiles.service updates!
-module.exports = { createCard, assignCard, reassignCard, bulkUpload, getUserCards, setCardStatus, handleTap, updateCard, redirectCache };
+module.exports = {
+  createCard,
+  assignCard,
+  sellCardWithBuyer,
+  reassignCard,
+  bulkUpload,
+  getUserCards,
+  setCardStatus,
+  handleTap,
+  updateCard,
+  redirectCache,
+};

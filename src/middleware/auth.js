@@ -21,31 +21,49 @@ function requireAuth(req, res, next) {
 }
 
 function requireRole(roles) {
-  const allowed = roles.map(normalizeRole);
   return (req, res, next) => {
     if (!req.user) return res.status(401).json({ ok: false, message: "Unauthenticated" });
-    const currentRole = normalizeRole(req.user.role);
-    if (!allowed.includes(currentRole)) return res.status(403).json({ ok: false, message: "Forbidden" });
-    return next();
+    
+    const role = req.user.role;
+    if (roles.includes(role)) return next();
+    
+    // Super admins satisfy admin requirements
+    if (role === "SUPER_ADMIN" && roles.includes("ADMIN")) return next();
+    
+    return res.status(403).json({ ok: false, message: "Forbidden" });
   };
 }
 
 function requirePermission(permissionKey) {
   return async (req, res, next) => {
     if (!req.user) return res.status(401).json({ ok: false, message: "Unauthenticated" });
-    const currentRole = normalizeRole(req.user.role);
-    if (currentRole !== "ADMIN") return res.status(403).json({ ok: false, message: "Forbidden" });
+    
+    const role = req.user.role;
+    const isAnyAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
+    
+    if (!isAnyAdmin) return res.status(403).json({ ok: false, message: "Forbidden" });
 
     const perm = await AdminPermission.findOne({ where: { user_id: req.user.id, is_active: true } });
     // Back-compat: existing admins without a permissions row are treated as super-admin.
     if (!perm) return next();
-    if (perm.is_super) return next();
+    if (perm.is_super || role === "SUPER_ADMIN") return next();
 
     const allowed = perm.permissions?.[permissionKey] === true;
     if (!allowed) return res.status(403).json({ ok: false, message: "Forbidden" });
+    
     return next();
   };
 }
 
-module.exports = { requireAuth, requireRole, requirePermission };
+function requireSelfOrAdmin(paramName = "userId") {
+  return (req, res, next) => {
+    if (!req.user) return res.status(401).json({ ok: false, message: "Unauthenticated" });
+    const currentRole = normalizeRole(req.user.role);
+    if (currentRole === "ADMIN") return next();
+    if (req.user.id === req.params[paramName]) return next();
+    return res.status(403).json({ ok: false, message: "Forbidden" });
+  };
+}
+
+module.exports = { requireAuth, requireRole, requirePermission, requireSelfOrAdmin };
 

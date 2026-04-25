@@ -1,7 +1,7 @@
 const { z } = require("zod");
 
 const updateProfileSchema = z.object({
-  userId: z.string().min(1),
+  userId: z.string().min(1).optional(),
   name: z.string().max(100).optional(),
   businessName: z.string().max(100).optional(),
   title: z.string().max(100).optional(),

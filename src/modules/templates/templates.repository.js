@@ -1,11 +1,15 @@
 const { Template } = require("../../models");
 
 async function listAllActive() {
-  return Template.findAll({ 
+  return Template.findAll({
     where: { is_active: true },
     attributes: ["id", "name", "layout_config", "preview_image"],
     order: [["created_at", "DESC"]],
   });
+}
+
+async function countActiveTemplates() {
+  return Template.count({ where: { is_active: true } });
 }
 
 async function findById(id) {
@@ -24,6 +28,7 @@ async function update(id, data) {
 
 module.exports = {
   listAllActive,
+  countActiveTemplates,
   findById,
   create,
   update,

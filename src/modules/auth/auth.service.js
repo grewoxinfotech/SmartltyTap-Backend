@@ -26,6 +26,37 @@ async function signup({ name, email, password }) {
 }
 
 async function login({ email, password }) {
+  const envUser = (env.envUsers || []).find((user) => user?.email === email && user?.password === password);
+  if (envUser) {
+    let user = await authRepository.findUserWithPasswordByEmail(email);
+    if (!user) {
+      user = await authRepository.insertUser({
+        id: envUser.id || `ENV-${email}`,
+        name: envUser.name || "Env User",
+        email: envUser.email,
+        passwordHash: "ENV_MANAGED",
+        role: envUser.role || "ADMIN",
+        plan: envUser.plan || "BASIC",
+        isActive: 1,
+      });
+    }
+
+    const token = jwt.sign({ id: user.id, role: user.role }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
+    return {
+      ok: true,
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          plan: user.plan,
+        },
+        token,
+      },
+    };
+  }
+
   const user = await authRepository.findUserWithPasswordByEmail(email);
   if (!user) return { ok: false, status: 401, message: "Invalid credentials" };
   if (!user.is_active) return { ok: false, status: 403, message: "Account disabled" };
@@ -36,7 +67,17 @@ async function login({ email, password }) {
   const token = jwt.sign({ id: user.id, role: user.role }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
   return {
     ok: true,
-    data: { user: { id: user.id, name: user.name, email: user.email, role: user.role, plan: user.plan }, token },
+    data: {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        plan: user.plan,
+        must_reset_password: user.reset_token === "FORCE_RESET",
+      },
+      token,
+    },
   };
 }
 
@@ -84,6 +125,7 @@ async function changePassword({ userId, currentPassword, newPassword }) {
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
   await authRepository.updatePassword(userId, passwordHash);
+  await authRepository.clearResetToken(userId);
   return { ok: true, data: { changed: true } };
 }
 

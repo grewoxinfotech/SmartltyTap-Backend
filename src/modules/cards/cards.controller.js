@@ -1,5 +1,5 @@
 const { ok, fail } = require("../../utils/response");
-const { createCardSchema, updateCardStatusSchema } = require("./cards.validators");
+const { createCardSchema, sellCardSchema, updateCardStatusSchema } = require("./cards.validators");
 const cardsService = require("./cards.service");
 
 async function create(req, res) {
@@ -21,6 +21,14 @@ async function assign(req, res) {
   const { cardUid, userId } = req.body;
   if (!cardUid || !userId) return fail(res, 400, "cardUid and userId are required");
   const result = await cardsService.assignCard(cardUid, userId);
+  if (!result.ok) return fail(res, result.status, result.message);
+  return ok(res, result.data);
+}
+
+async function sell(req, res) {
+  const parsed = sellCardSchema.safeParse(req.body);
+  if (!parsed.success) return fail(res, 400, "Invalid payload");
+  const result = await cardsService.sellCardWithBuyer(parsed.data);
   if (!result.ok) return fail(res, result.status, result.message);
   return ok(res, result.data);
 }
@@ -64,5 +72,5 @@ async function redirect(req, res) {
   return ok(res, result.data);
 }
 
-module.exports = { create, bulkUpload, assign, reassign, listByUser, status, update, redirect };
+module.exports = { create, bulkUpload, assign, sell, reassign, listByUser, status, update, redirect };
 

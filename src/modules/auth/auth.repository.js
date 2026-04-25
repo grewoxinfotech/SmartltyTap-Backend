@@ -8,19 +8,19 @@ async function findUserByEmail(email) {
 async function findUserWithPasswordByEmail(email) {
   return User.findOne({
     where: { email },
-    attributes: ["id", "name", "email", "password_hash", "role", "plan", "is_active"],
+    attributes: ["id", "name", "email", "password_hash", "role", "plan", "is_active", "reset_token"],
   });
 }
 
 async function findUserWithPasswordById(id) {
   return User.findOne({
     where: { id },
-    attributes: ["id", "name", "email", "password_hash", "role", "plan", "is_active"],
+    attributes: ["id", "name", "email", "password_hash", "role", "plan", "is_active", "reset_token"],
   });
 }
 
 async function insertUser({ id, name, email, passwordHash, role, plan, isActive }) {
-  await User.create({
+  return User.create({
     id,
     name,
     email,
